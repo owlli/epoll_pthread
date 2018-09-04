@@ -4,7 +4,7 @@
  * @Email:  phoenix_lzh@sina.com
  * @Filename: server.c
  * @Last modified by:   lzh
- * @Last modified time: 2018-09-04T01:44:11+08:00
+ * @Last modified time: 2018-09-04T16:41:12+08:00
  * @License: GPLV3
  */
 #include "proto.h"
@@ -102,7 +102,7 @@ int main() {
   struct sockaddr_in laddr, raddr;
   socklen_t raddr_len;
   struct epoll_event ep, eps[SIZE];
-  // int epfd,nfd;
+  // int epfd, nfd;
   int n = 0;
   pthread_t tid;
   int err;
@@ -112,6 +112,8 @@ int main() {
     perror("socket()");
     exit(1);
   }
+  // sd必须为非阻塞socket,否则如果在accept上发生阻塞
+  //程序就不会执行到epoll_wait,从而无法处理其他可读事件
   setnonblocking(sd);
 
   int val = 1;
@@ -153,7 +155,10 @@ int main() {
     }
     for (n = 0; n < nfd; n++) {
       //如果发现可读事件发生在sd上,将accept后新建的newsd加入到监视列表
-      if (eps[n].data.fd == sd && eps[n].events & EPOLLIN) {
+      if (eps[n].data.fd == sd) {
+        //因为设置epoll为et模式,只有当监视的文件描述符从不可读变为可读才触发
+        //为防止多个客户端同时connect,所以必须循环accept
+        //直到accept返回-1且errno为EGAIN或返回0,处理完TCP就绪队列中的所有连接后再退出循环
         while ((newsd = accept(sd, (void *)&raddr, &raddr_len)) > 0) {
           printf("a new client has connected\n");
           setnonblocking(newsd);
@@ -167,13 +172,12 @@ int main() {
           nfd++;
           pthread_mutex_unlock(&mut_num);
         }
-        if (newsd < 0) {
-          if (errno == EAGAIN)
-            continue;
+        if (newsd < 0 && errno != EAGAIN) {
           perror("accept()");
-          break;
         }
-      } else if (eps[n].events & EPOLLIN) {
+      }
+      //否则创建新线程处理客户端send来的数据
+      else if (eps[n].events & EPOLLIN) {
         err = pthread_create(&tid, NULL, udf_func, (void *)&eps[n].data.fd);
         if (err) {
           fprintf(stderr, "pthread_create():%s\n", strerror(err));
@@ -183,6 +187,5 @@ int main() {
     }
   }
 
-  sleep(1);
   return 0;
 }

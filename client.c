@@ -4,7 +4,7 @@
  * @Email:  phoenix_lzh@sina.com
  * @Filename: client.c
  * @Last modified by:   lzh
- * @Last modified time: 2018-09-04T01:40:52+08:00
+ * @Last modified time: 2018-09-04T17:02:40+08:00
  * @License: GPLV3
  */
 #include "proto.h"
@@ -16,6 +16,7 @@
 #include <sys/ipc.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 int main(int argc, char **argv) {
@@ -23,6 +24,8 @@ int main(int argc, char **argv) {
   struct sockaddr_in raddr;
   struct msg_st msg_st_val;
   size_t msg_st_len = sizeof(msg_st_val);
+
+  srand(time(NULL));
 
   if (argc < 2) {
     fprintf(stderr, "Usage...\n");
@@ -43,14 +46,14 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  msg_st_val.num = htonl(666);
+  msg_st_val.num = htonl(rand() % 100);
   memset(msg_st_val.str, '\0', msg_st_len);
-  strcpy(msg_st_val.str, "lizhiheng");
+  strcpy((char *)msg_st_val.str, argv[2]);
 
   if (send(sd, &msg_st_val, msg_st_len, 0) < 0) {
     perror("send()");
     exit(1);
   }
   close(sd);
-  sleep(1);
+  return 0;
 }

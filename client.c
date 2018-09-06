@@ -4,7 +4,7 @@
  * @Email:  phoenix_lzh@sina.com
  * @Filename: client.c
  * @Last modified by:   lzh
- * @Last modified time: 2018-09-04T17:02:40+08:00
+ * @Last modified time: 2018-09-06T01:15:07+08:00
  * @License: GPLV3
  */
 #include "proto.h"
@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
     perror("send()");
     exit(1);
   }
-  close(sd);
+  // sleep(50);
+  // close(sd);
   return 0;
 }
